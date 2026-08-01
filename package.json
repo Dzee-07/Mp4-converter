@@ -9,8 +9,11 @@
     "dev": "node --watch src/index.js"
   },
   "dependencies": {
+    "cors": "^2.8.5",
     "express": "^4.19.2",
-    "node-fetch": "^3.3.2",
-    "cors": "^2.8.5"
+    "node-fetch": "^3.3.2"
+  },
+  "devDependencies": {
+    "vite": "^8.2.0"
   }
 }
