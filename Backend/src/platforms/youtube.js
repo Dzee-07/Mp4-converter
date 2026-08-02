@@ -45,13 +45,21 @@ export class YouTubePlatform extends BasePlatform {
     };
   }
 
-  async searchVideos(query, limit = 8) {
+  async searchVideos(query, { limit = 10, pageToken = null } = {}) {
     const apiKey = process.env.YOUTUBE_API_KEY;
     if (!apiKey) {
       throw permanentError("YOUTUBE_API_KEY is not set on the backend — search needs a real API key (see README).");
     }
-    const endpoint = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=${limit}&q=${encodeURIComponent(query)}&key=${apiKey}`;
-    const res = await fetch(endpoint);
+    const params = new URLSearchParams({
+      part: "snippet",
+      type: "video",
+      maxResults: String(limit),
+      q: query,
+      key: apiKey,
+    });
+    if (pageToken) params.set("pageToken", pageToken);
+
+    const res = await fetch(`https://www.googleapis.com/youtube/v3/search?${params.toString()}`);
 
     if (res.status === 403) {
       throw permanentError("YouTube API key was rejected (quota exceeded, restricted, or invalid).");
@@ -61,13 +69,16 @@ export class YouTubePlatform extends BasePlatform {
     }
 
     const data = await res.json();
-    return (data.items || []).map((item) => ({
-      id: item.id.videoId,
-      title: item.snippet.title,
-      thumbnail: item.snippet.thumbnails?.medium?.url ?? item.snippet.thumbnails?.default?.url ?? null,
-      author: item.snippet.channelTitle,
-      url: `https://www.youtube.com/watch?v=${item.id.videoId}`,
-    }));
+    return {
+      results: (data.items || []).map((item) => ({
+        id: item.id.videoId,
+        title: item.snippet.title,
+        thumbnail: item.snippet.thumbnails?.medium?.url ?? item.snippet.thumbnails?.default?.url ?? null,
+        author: item.snippet.channelTitle,
+        url: `https://www.youtube.com/watch?v=${item.id.videoId}`,
+      })),
+      nextPageToken: data.nextPageToken ?? null,
+    };
   }
 
   async getDownloadInfo(_url) {

@@ -200,6 +200,8 @@ export default function App() {
   const [previewItem, setPreviewItem] = useState(null);
   const [downloadFlow, setDownloadFlow] = useState(null);
   const [toast, setToast] = useState(null);
+  const [completeBanner, setCompleteBanner] = useState(null); // { title } — stays until dismissed, unlike toasts
+  const [bannerShown, setBannerShown] = useState(false);
 
   const [users, setUsers] = useState(SEED_USERS);
   const [adminAuthed, setAdminAuthed] = useState(false);
@@ -234,6 +236,20 @@ export default function App() {
     const t = setTimeout(() => setToast(null), 1000);
     return () => clearTimeout(t);
   }, [toast]);
+
+  useEffect(() => {
+    if (completeBanner) {
+      setBannerShown(false);
+      const t = setTimeout(() => setBannerShown(true), 20); // next tick, so the transition actually animates
+      return () => clearTimeout(t);
+    }
+    setBannerShown(false);
+  }, [completeBanner]);
+
+  const dismissBanner = () => {
+    setBannerShown(false);
+    setTimeout(() => setCompleteBanner(null), 250); // let the slide-down finish first
+  };
 
   useEffect(() => {
     if (!previewItem) return;
@@ -369,8 +385,8 @@ export default function App() {
           clearInterval(progressTimer.current);
           saveBlobFile(item, res);
           setHistory((h) => [{ id: Date.now(), title: item.title, platform, resolution: res, time: new Date().toLocaleString() }, ...h]);
-          setToast({ type: "success", text: "Download complete" });
-          setTimeout(() => setDownloadFlow(null), 900);
+          setCompleteBanner({ title: item.title });
+          setTimeout(() => setDownloadFlow(null), 500);
           return { ...f, progress: 100, phase: "done" };
         }
         return { ...f, progress: nextVal };
@@ -623,6 +639,7 @@ export default function App() {
                 </div>
               ))}
               <button onClick={() => setHistory([])} className="flex items-center gap-1.5 text-xs text-red-400 mt-2"><Trash2 size={13} /> Clear history</button>
+              <p className={`text-[11px] mt-1 ${subtle}`}>Files save to your browser's default Downloads location — a website can't open your device's folders directly, so check there if you don't see them.</p>
             </div>
           )}
         </Overlay>
@@ -755,6 +772,34 @@ export default function App() {
           {toast.type === "error" && <AlertCircle size={13} />}
           {toast.type === "info" && <Download size={13} />}
           {toast.text}
+        </div>
+      )}
+
+      {completeBanner && (
+        <div className="fixed inset-0 z-[75]" onClick={dismissBanner}>
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="absolute bottom-0 left-0 right-0 sm:max-w-sm sm:left-1/2 sm:-translate-x-1/2 sm:bottom-5 sm:rounded-2xl rounded-t-2xl p-4 shadow-2xl flex items-center gap-3"
+            style={{
+              backgroundColor: "#17171A",
+              transform: bannerShown ? "translateY(0)" : "translateY(120%)",
+              transition: "transform 260ms ease-out",
+            }}
+          >
+            <div className="w-9 h-9 rounded-full bg-emerald-500/20 flex items-center justify-center flex-shrink-0">
+              <CheckCircle2 size={18} className="text-emerald-400" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="text-sm font-medium text-white">Download complete</div>
+              <div className="text-xs text-neutral-400 truncate">{completeBanner.title}</div>
+            </div>
+            <button
+              onClick={() => { dismissBanner(); setShowHistory(true); }}
+              className="text-xs font-medium px-3 py-2 rounded-lg text-white bg-white/10 hover:bg-white/20 flex-shrink-0"
+            >
+              View
+            </button>
+          </div>
         </div>
       )}
     </div>

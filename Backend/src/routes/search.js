@@ -16,8 +16,8 @@ const router = Router();
  *   instead of pretending to search.
  */
 router.get("/search", async (req, res) => {
-  const { platform, q } = req.query;
-  logger.info("search request", { platform, q });
+  const { platform, q, pageToken } = req.query;
+  logger.info("search request", { platform, q, pageToken });
 
   if (!q || !q.trim()) {
     return res.status(400).json({ success: false, error: "A search query is required." });
@@ -37,12 +37,11 @@ router.get("/search", async (req, res) => {
   }
 
   try {
-    const results = await withRetry(() => adapter.searchVideos(q.trim()), {
-      attempts: config.retry.attempts,
-      baseDelayMs: config.retry.baseDelayMs,
-      label: `${platform}.searchVideos`,
-    });
-    res.json({ success: true, platform, results });
+    const { results, nextPageToken } = await withRetry(
+      () => adapter.searchVideos(q.trim(), { limit: 10, pageToken: pageToken || null }),
+      { attempts: config.retry.attempts, baseDelayMs: config.retry.baseDelayMs, label: `${platform}.searchVideos` }
+    );
+    res.json({ success: true, platform, results, nextPageToken });
   } catch (err) {
     logger.error("search failed", { platform, q, error: err.message });
     res.status(422).json({ success: false, platform, error: err.message });
