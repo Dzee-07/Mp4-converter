@@ -72,6 +72,16 @@ const RESOLUTIONS = {
 
 const isUrl = (v) => /^(https?:\/\/)?(www\.)?[\w-]+\.[a-z]{2,}(\/\S*)?$/i.test(v.trim());
 
+// YouTube provides an official embeddable player (youtube.com/embed/<id>) —
+// this extracts a real 11-char video ID so search results and pasted links
+// can actually play via YouTube's own sanctioned embed, not a fake preview.
+function extractYouTubeId(item) {
+  if (item?.id && /^[\w-]{11}$/.test(item.id)) return item.id;
+  const url = item?.url || "";
+  const m = url.match(/(?:v=|youtu\.be\/|embed\/)([\w-]{11})/);
+  return m ? m[1] : null;
+}
+
 function mockTitle(platform, seed) {
   const titles = {
     youtube: ["How Rivers Shape Mountains", "Late Night Lo-Fi Mix", "Building a Tiny House Ep. 4", "Street Food Tour: Bangkok"],
@@ -463,11 +473,18 @@ export default function App() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {searchResults.map((r) => (
                 <div key={r.id} onClick={() => pickResult(r)} className="flex gap-3 p-3 rounded-2xl border text-left cursor-pointer hover:opacity-90 transition" style={{ backgroundColor: cardBgColor, borderColor: cardBorderColor }}>
-                  <Thumb item={r} gradientClass={theme_.gradient} size="grid" onPreview={setPreviewItem} onDownloadClick={openDownloadFlow} />
-                  <div className="min-w-0">
+                  <Thumb item={r} gradientClass={theme_.gradient} size="grid" onPreview={setPreviewItem} />
+                  <div className="min-w-0 flex-1">
                     <div className="text-sm font-semibold truncate" style={{ color: titleColor }}>{r.title}</div>
                     <div className={`text-xs mt-1 ${subtle}`}>{theme_.label} - matches "{r.query}"</div>
                   </div>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); openDownloadFlow(r); }}
+                    className={`self-center flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${dark ? "bg-white/10 hover:bg-white/20" : "bg-black/10 hover:bg-black/20"}`}
+                    aria-label="Download"
+                  >
+                    <Download size={14} className={dark ? "text-white" : "text-neutral-800"} />
+                  </button>
                 </div>
               ))}
             </div>
@@ -477,11 +494,18 @@ export default function App() {
         {stage === "detail" && selected && (
           <div className="rounded-2xl border p-4 sm:p-5" style={{ backgroundColor: cardBgColor, borderColor: cardBorderColor }}>
             <div className="flex gap-4">
-              <Thumb item={selected} gradientClass={theme_.gradient} size="detail" onPreview={setPreviewItem} onDownloadClick={openDownloadFlow} />
-              <div className="min-w-0">
+              <Thumb item={selected} gradientClass={theme_.gradient} size="detail" onPreview={setPreviewItem} />
+              <div className="min-w-0 flex-1">
                 <div className="font-semibold truncate" style={{ color: titleColor }}>{selected.title}</div>
                 <div className={`text-xs mt-1 ${subtle}`}>{theme_.label}{selected.url ? ` - ${selected.url}` : ""}</div>
               </div>
+              <button
+                onClick={() => openDownloadFlow(selected)}
+                className={`self-center flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center ${dark ? "bg-white/10 hover:bg-white/20" : "bg-black/10 hover:bg-black/20"}`}
+                aria-label="Download"
+              >
+                <Download size={15} className={dark ? "text-white" : "text-neutral-800"} />
+              </button>
             </div>
 
             <div className="mt-5">
@@ -627,12 +651,29 @@ export default function App() {
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/55 p-4" onClick={closePreview}>
           <div onClick={(e) => e.stopPropagation()} className="relative w-full max-w-md rounded-2xl overflow-hidden shadow-2xl">
             <button onClick={closePreview} className="absolute top-3 right-3 z-10 w-8 h-8 rounded-full bg-black/60 flex items-center justify-center" aria-label="Close preview"><X size={16} className="text-white" /></button>
-            <div className={`aspect-video w-full bg-gradient-to-br ${theme_.gradient} flex items-center justify-center`}>
-              <div className="w-16 h-16 rounded-full bg-black/25 flex items-center justify-center animate-pulse"><Play size={26} className="text-white" fill="white" /></div>
-            </div>
+            {platform === "youtube" && extractYouTubeId(previewItem) ? (
+              <iframe
+                className="aspect-video w-full block"
+                src={`https://www.youtube.com/embed/${extractYouTubeId(previewItem)}?rel=0`}
+                title={previewItem.title}
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              />
+            ) : (
+              <div
+                className={`aspect-video w-full flex items-center justify-center bg-cover bg-center ${(previewItem.thumbnail || previewItem.thumbnailUrl) ? "" : `bg-gradient-to-br ${theme_.gradient}`}`}
+                style={(previewItem.thumbnail || previewItem.thumbnailUrl) ? { backgroundImage: `url(${previewItem.thumbnail || previewItem.thumbnailUrl})` } : undefined}
+              >
+                <div className="w-16 h-16 rounded-full bg-black/40 flex items-center justify-center"><Play size={26} className="text-white" fill="white" /></div>
+              </div>
+            )}
             <div className="p-4" style={{ backgroundColor: "#151517" }}>
               <div className="font-semibold text-sm text-white truncate">{previewItem.title}</div>
-              <div className="text-xs text-neutral-400 mt-1">{theme_.label} preview - demo build - no real video stream is connected yet.</div>
+              <div className="text-xs text-neutral-400 mt-1">
+                {platform === "youtube" && extractYouTubeId(previewItem)
+                  ? "Playing via YouTube's own embedded player."
+                  : `${theme_.label} preview - demo build - no real video stream is connected yet.`}
+              </div>
               <button onClick={() => { closePreview(); openDownloadFlow(previewItem); }} className={`mt-3 w-full py-2.5 rounded-xl text-sm font-medium text-white bg-gradient-to-r ${theme_.gradient}`}>
                 Choose resolution &amp; download
               </button>
@@ -716,17 +757,24 @@ function AdminLoginForm({ dark, onSubmit }) {
   );
 }
 
-function Thumb({ item, gradientClass, size, onPreview, onDownloadClick }) {
+function Thumb({ item, gradientClass, size, onPreview }) {
   const grid = size === "grid";
+  const dims = grid ? "w-20 h-14 sm:w-24 sm:h-16" : "w-24 h-16 sm:w-32 sm:h-20";
+  const thumbUrl = item.thumbnail || item.thumbnailUrl || null;
   return (
-    <div className={`relative rounded-xl overflow-hidden flex-shrink-0 bg-gradient-to-br ${gradientClass} ${grid ? "w-20 h-14 sm:w-24 sm:h-16" : "w-24 h-16 sm:w-32 sm:h-20"}`}>
-      <button onClick={(e) => { e.stopPropagation(); onPreview(item); }} className="absolute inset-0 flex items-center justify-center" aria-label="Preview video">
-        <Play size={grid ? 18 : 22} className="text-white/90" fill="white" />
-      </button>
-      <button onClick={(e) => { e.stopPropagation(); onDownloadClick(item); }} className="absolute bottom-1 right-1 w-6 h-6 rounded-full bg-black/60 hover:bg-black/80 flex items-center justify-center backdrop-blur-sm transition" aria-label="Download">
-        <Download size={12} className="text-white" />
-      </button>
-    </div>
+    <button onClick={(e) => { e.stopPropagation(); onPreview(item); }} className={`relative rounded-xl overflow-hidden flex-shrink-0 ${dims} ${thumbUrl ? "bg-black" : `bg-gradient-to-br ${gradientClass}`}`} aria-label="Preview video">
+      {thumbUrl && (
+        <img
+          src={thumbUrl}
+          alt=""
+          className="absolute inset-0 w-full h-full object-cover"
+          onError={(e) => { e.currentTarget.style.display = "none"; e.currentTarget.parentElement.classList.add("bg-gradient-to-br", ...gradientClass.split(" ")); }}
+        />
+      )}
+      <span className="absolute inset-0 flex items-center justify-center bg-black/10 hover:bg-black/25 transition">
+        <Play size={grid ? 18 : 22} className="text-white drop-shadow" fill="white" />
+      </span>
+    </button>
   );
 }
 
