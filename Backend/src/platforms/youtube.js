@@ -2,6 +2,18 @@ import fetch from "node-fetch";
 import { BasePlatform } from "./BasePlatform.js";
 import { permanentError } from "../utils/retry.js";
 
+/** Converts YouTube's ISO 8601 duration (e.g. "PT3M24S") into "3:24" / "1:02:03". */
+function formatIsoDuration(iso) {
+  if (!iso) return null;
+  const m = iso.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
+  if (!m) return null;
+  const h = parseInt(m[1] || "0", 10);
+  const min = parseInt(m[2] || "0", 10);
+  const s = parseInt(m[3] || "0", 10);
+  const pad = (n) => String(n).padStart(2, "0");
+  return h > 0 ? `${h}:${pad(min)}:${pad(s)}` : `${min}:${pad(s)}`;
+}
+
 /**
  * YouTube adapter.
  *
@@ -69,16 +81,37 @@ export class YouTubePlatform extends BasePlatform {
     }
 
     const data = await res.json();
+    const items = data.items || [];
+    const ids = items.map((item) => item.id.videoId).filter(Boolean);
+    const durations = ids.length ? await this._fetchDurations(ids, apiKey) : {};
+
     return {
-      results: (data.items || []).map((item) => ({
+      results: items.map((item) => ({
         id: item.id.videoId,
         title: item.snippet.title,
         thumbnail: item.snippet.thumbnails?.medium?.url ?? item.snippet.thumbnails?.default?.url ?? null,
         author: item.snippet.channelTitle,
         url: `https://www.youtube.com/watch?v=${item.id.videoId}`,
+        duration: durations[item.id.videoId] ?? null, // e.g. "3:24" — null if lookup failed
       })),
       nextPageToken: data.nextPageToken ?? null,
     };
+  }
+
+  /** Batches a videos.list(contentDetails) call to get real durations for up to 50 IDs at once. */
+  async _fetchDurations(ids, apiKey) {
+    try {
+      const res = await fetch(`https://www.googleapis.com/youtube/v3/videos?part=contentDetails&id=${ids.join(",")}&key=${apiKey}`);
+      if (!res.ok) return {};
+      const data = await res.json();
+      const out = {};
+      for (const v of data.items || []) {
+        out[v.id] = formatIsoDuration(v.contentDetails?.duration);
+      }
+      return out;
+    } catch {
+      return {}; // duration is a nice-to-have — never fail the whole search over it
+    }
   }
 
   async getDownloadInfo(_url) {

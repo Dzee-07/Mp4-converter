@@ -268,6 +268,7 @@ export default function App() {
   const dark = theme === "dark";
 
   const resetFlow = () => { setStage("idle"); setSearchResults([]); setSelected(null); setResolution(null); };
+  const goBack = () => { setSelected(null); setResolution(null); setStage(searchResults.length ? "results" : "idle"); };
 
   const handleAction = async () => {
     const q = query.trim();
@@ -573,6 +574,11 @@ export default function App() {
 
         {stage === "detail" && selected && (
           <div className="rounded-2xl border p-4 sm:p-5" style={{ backgroundColor: cardBgColor, borderColor: cardBorderColor }}>
+            {searchResults.length > 0 && (
+              <button onClick={goBack} className={`flex items-center gap-1.5 text-xs mb-4 ${subtle}`}>
+                <ArrowLeft size={14} /> Back to results
+              </button>
+            )}
             <div className="flex gap-4">
               <Thumb item={selected} gradientClass={theme_.gradient} size="detail" onPreview={setPreviewItem} />
               <div className="min-w-0 flex-1">
@@ -883,6 +889,11 @@ function Thumb({ item, gradientClass, size, onPreview }) {
       <span className="absolute inset-0 flex items-center justify-center bg-black/10 hover:bg-black/25 transition">
         <Play size={grid ? 18 : 22} className="text-white drop-shadow" fill="white" />
       </span>
+      {item.duration && (
+        <span className="absolute bottom-1 right-1 px-1.5 py-0.5 rounded bg-black/80 text-white text-[10px] font-medium leading-none">
+          {item.duration}
+        </span>
+      )}
     </button>
   );
 }
