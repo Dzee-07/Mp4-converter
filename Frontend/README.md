@@ -79,8 +79,8 @@ The honest state of things right now:
 
 ## Is there a web version of this?
 
-The interactive preview you've been testing in this chat *is* a web app —
-it's rendering live in your browser right now, just not at a public URL.
+The interactive preview you've been testing in this chat *is* a running web app —
+it's rendering live in your browser right now, just not at a public URL yet.
 To get a real link you can share:
 1. Push this `frontend/` folder to a GitHub repo.
 2. Deploy it on Vercel, Netlify, or Cloudflare Pages (all have a free tier
@@ -89,3 +89,28 @@ To get a real link you can share:
 3. Set `VITE_API_BASE_URL` as an environment variable in that host's
    dashboard, pointing at wherever you deploy `backend/` (Render, Railway,
    Fly.io, or a Supabase Edge Function all work).
+
+## Why search/paste shows fake results on my deployed site
+
+If your frontend is live on Vercel but search or pasted links still show
+placeholder data, it's almost always because **only the frontend got
+deployed** — `backend/` is a separate Node project that needs its own
+hosting. The frontend calls it, but if there's nothing at
+`VITE_API_BASE_URL`, it silently falls back to demo data so the UI never
+breaks.
+
+To get real results in production:
+1. Deploy `backend/` somewhere that runs Node (Render and Railway both have
+   simple free tiers — point them at the `backend/` folder, build command
+   `npm install`, start command `npm start`).
+2. Add `YOUTUBE_API_KEY` as an environment variable on that host (see the
+   backend's own README for how to get one).
+3. In your Vercel project settings → Environment Variables, set
+   `VITE_API_BASE_URL` to your deployed backend's URL + `/api`
+   (e.g. `https://your-backend.onrender.com/api`).
+4. Redeploy the frontend so it picks up the new env var.
+
+Once that's wired up: YouTube search and pasted YouTube/TikTok links will
+show real titles/thumbnails. TikTok/Facebook/Instagram search still won't —
+see the backend README for why.
+

@@ -263,11 +263,24 @@ export default function App() {
         }
       } catch {}
     } else {
-      const results = Array.from({ length: 6 }).map((_, i) => ({
+      setStage("results");
+      const mock = Array.from({ length: 6 }).map((_, i) => ({
         id: "r" + i, title: mockTitle(platform, q.length + i), platform, query: q,
       }));
-      setSearchResults(results);
-      setStage("results");
+      setSearchResults(mock); // shown immediately so the UI never sits empty
+
+      const API_BASE = getApiBase();
+      if (!API_BASE) return;
+      try {
+        const res = await fetch(`${API_BASE}/search?platform=${platform}&q=${encodeURIComponent(q)}`);
+        const data = await res.json();
+        if (data.success && Array.isArray(data.results) && data.results.length) {
+          setSearchResults(data.results.map((r) => ({ ...r, platform, query: q })));
+        }
+        // on failure (e.g. no API key, unsupported platform) we just keep the mock results
+      } catch {
+        // backend unreachable — keep mock results
+      }
     }
   };
 
