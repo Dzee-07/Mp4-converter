@@ -371,7 +371,12 @@ export default function App() {
         const nextVal = Math.min(100, f.progress + Math.random() * 20 + 10);
         if (nextVal >= 100) {
           clearInterval(progressTimer.current);
-          saveBlobFile(item, res);
+          const a = document.createElement("a");
+          a.href = res.downloadUrl;
+          a.download = `${item.title}.mp4`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
           setHistory((h) => [{ id: Date.now(), title: item.title, platform, resolution: res, time: new Date().toLocaleString() }, ...h]);
           setCompleteBanner({ title: item.title });
           setTimeout(() => setDownloadFlow(null), 500);
