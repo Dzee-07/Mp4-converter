@@ -354,19 +354,6 @@ export default function App() {
     setStage("detail");
   };
 
-  const saveBlobFile = (item, res) => {
-    const blob = new Blob(
-      [`Placeholder file from the Omega Converter demo.\n\nTitle: ${item.title}\nPlatform: ${platform}\nResolution: ${res}\n\nThis is saved to your browser's default Downloads folder. A website can't open OS folders directly (browser sandbox restriction) - but that's already where every download lands, and most browsers offer a "show in folder" shortcut from their own download tray/notification.`],
-      { type: "text/plain" }
-    );
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${item.title.replace(/[^\w-]+/g, "_")}.txt`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
   const openDownloadFlow = (item) => setDownloadFlow({ item, phase: "resolution", resolution: RESOLUTIONS[platform][0], progress: 0 });
 
   const runDownload = (item, res) => {
