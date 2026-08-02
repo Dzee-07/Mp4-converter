@@ -185,6 +185,7 @@ export default function App() {
   const [searchResults, setSearchResults] = useState([]);
   const [nextPageToken, setNextPageToken] = useState(null);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
   const [activeSearch, setActiveSearch] = useState(null); // { query, platform } for the current result set
   const [selected, setSelected] = useState(null);
   const [resolution, setResolution] = useState(null);
@@ -279,23 +280,35 @@ export default function App() {
       setStage("results");
       setNextPageToken(null);
       setActiveSearch({ query: q, platform });
-      const mock = Array.from({ length: 6 }).map((_, i) => ({
-        id: "r" + i, title: mockTitle(platform, q.length + i), platform, query: q,
-      }));
-      setSearchResults(mock); // shown immediately so the UI never sits empty
+      setSearchResults([]);
+      setIsSearching(true);
 
       const API_BASE = getApiBase();
-      if (!API_BASE) return;
+      const fallbackToDemo = () => {
+        const mock = Array.from({ length: 6 }).map((_, i) => ({
+          id: "r" + i, title: mockTitle(platform, q.length + i), platform, query: q, isDemo: true,
+        }));
+        setSearchResults(mock);
+      };
+
+      if (!API_BASE) {
+        fallbackToDemo();
+        setIsSearching(false);
+        return;
+      }
       try {
         const res = await fetch(`${API_BASE}/search?platform=${platform}&q=${encodeURIComponent(q)}`);
         const data = await res.json();
         if (data.success && Array.isArray(data.results) && data.results.length) {
           setSearchResults(data.results.map((r) => ({ ...r, platform, query: q })));
           setNextPageToken(data.nextPageToken || null);
+        } else {
+          fallbackToDemo(); // e.g. no API key set, or platform has no real search yet
         }
-        // on failure (e.g. no API key, unsupported platform) we just keep the mock results
       } catch {
-        // backend unreachable — keep mock results
+        fallbackToDemo(); // backend unreachable
+      } finally {
+        setIsSearching(false);
       }
     }
   };
@@ -494,24 +507,42 @@ export default function App() {
         {stage === "results" && (
           <div>
             <div className={`text-xs uppercase tracking-wide mb-3 ${subtle}`}>Results on {theme_.label}</div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {searchResults.map((r) => (
-                <div key={r.id} onClick={() => pickResult(r)} className="flex gap-3 p-3 rounded-2xl border text-left cursor-pointer hover:opacity-90 transition" style={{ backgroundColor: cardBgColor, borderColor: cardBorderColor }}>
-                  <Thumb item={r} gradientClass={theme_.gradient} size="grid" onPreview={setPreviewItem} />
-                  <div className="min-w-0 flex-1">
-                    <div className="text-sm font-semibold truncate" style={{ color: titleColor }}>{r.title}</div>
-                    <div className={`text-xs mt-1 ${subtle}`}>{theme_.label} - matches "{r.query}"</div>
+
+            {isSearching ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <div key={i} className="flex gap-3 p-3 rounded-2xl border animate-pulse" style={{ backgroundColor: cardBgColor, borderColor: cardBorderColor }}>
+                    <div className={`w-20 h-14 sm:w-24 sm:h-16 rounded-xl flex-shrink-0 ${dark ? "bg-white/10" : "bg-black/10"}`} />
+                    <div className="min-w-0 flex-1 flex flex-col gap-2 justify-center">
+                      <div className={`h-3 rounded ${dark ? "bg-white/10" : "bg-black/10"}`} style={{ width: "80%" }} />
+                      <div className={`h-2.5 rounded ${dark ? "bg-white/10" : "bg-black/10"}`} style={{ width: "50%" }} />
+                    </div>
                   </div>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); openDownloadFlow(r); }}
-                    className={`self-center flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${dark ? "bg-white/10 hover:bg-white/20" : "bg-black/10 hover:bg-black/20"}`}
-                    aria-label="Download"
-                  >
-                    <Download size={14} className={dark ? "text-white" : "text-neutral-800"} />
-                  </button>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {searchResults.map((r) => (
+                  <div key={r.id} onClick={() => pickResult(r)} className="flex gap-3 p-3 rounded-2xl border text-left cursor-pointer hover:opacity-90 transition" style={{ backgroundColor: cardBgColor, borderColor: cardBorderColor }}>
+                    <Thumb item={r} gradientClass={theme_.gradient} size="grid" onPreview={setPreviewItem} />
+                    <div className="min-w-0 flex-1">
+                      <div className="text-sm font-semibold truncate flex items-center gap-1.5" style={{ color: titleColor }}>
+                        {r.title}
+                        {r.isDemo && <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-normal flex-shrink-0 ${dark ? "bg-white/10 text-neutral-400" : "bg-black/10 text-neutral-500"}`}>DEMO</span>}
+                      </div>
+                      <div className={`text-xs mt-1 ${subtle}`}>{theme_.label} - matches "{r.query}"</div>
+                    </div>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); openDownloadFlow(r); }}
+                      className={`self-center flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${dark ? "bg-white/10 hover:bg-white/20" : "bg-black/10 hover:bg-black/20"}`}
+                      aria-label="Download"
+                    >
+                      <Download size={14} className={dark ? "text-white" : "text-neutral-800"} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
             {nextPageToken && (
               <button
                 onClick={loadMoreResults}
