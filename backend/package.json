@@ -1,0 +1,16 @@
+{
+  "name": "omega-downloader-service",
+  "version": "1.0.0",
+  "description": "Modular metadata/downloader service for the Omega Converter frontend",
+  "type": "module",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "node-fetch": "^3.3.2",
+    "cors": "^2.8.5"
+  }
+}

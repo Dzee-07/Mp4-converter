@@ -183,6 +183,9 @@ export default function App() {
   const [online, setOnline] = useState(typeof navigator !== "undefined" ? navigator.onLine : true);
   const [stage, setStage] = useState("idle");
   const [searchResults, setSearchResults] = useState([]);
+  const [nextPageToken, setNextPageToken] = useState(null);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [activeSearch, setActiveSearch] = useState(null); // { query, platform } for the current result set
   const [selected, setSelected] = useState(null);
   const [resolution, setResolution] = useState(null);
   const [removeWatermark, setRemoveWatermark] = useState(true);
@@ -274,6 +277,8 @@ export default function App() {
       } catch {}
     } else {
       setStage("results");
+      setNextPageToken(null);
+      setActiveSearch({ query: q, platform });
       const mock = Array.from({ length: 6 }).map((_, i) => ({
         id: "r" + i, title: mockTitle(platform, q.length + i), platform, query: q,
       }));
@@ -286,11 +291,30 @@ export default function App() {
         const data = await res.json();
         if (data.success && Array.isArray(data.results) && data.results.length) {
           setSearchResults(data.results.map((r) => ({ ...r, platform, query: q })));
+          setNextPageToken(data.nextPageToken || null);
         }
         // on failure (e.g. no API key, unsupported platform) we just keep the mock results
       } catch {
         // backend unreachable — keep mock results
       }
+    }
+  };
+
+  const loadMoreResults = async () => {
+    const API_BASE = getApiBase();
+    if (!API_BASE || !nextPageToken || !activeSearch || loadingMore) return;
+    setLoadingMore(true);
+    try {
+      const res = await fetch(`${API_BASE}/search?platform=${activeSearch.platform}&q=${encodeURIComponent(activeSearch.query)}&pageToken=${nextPageToken}`);
+      const data = await res.json();
+      if (data.success && Array.isArray(data.results)) {
+        setSearchResults((prev) => [...prev, ...data.results.map((r) => ({ ...r, platform: activeSearch.platform, query: activeSearch.query }))]);
+        setNextPageToken(data.nextPageToken || null);
+      }
+    } catch {
+      // leave existing results as-is on failure
+    } finally {
+      setLoadingMore(false);
     }
   };
 
@@ -488,6 +512,15 @@ export default function App() {
                 </div>
               ))}
             </div>
+            {nextPageToken && (
+              <button
+                onClick={loadMoreResults}
+                disabled={loadingMore}
+                className={`mt-4 w-full py-2.5 rounded-xl text-sm font-medium border flex items-center justify-center gap-2 ${dark ? "border-white/10 hover:bg-white/5" : "border-black/10 hover:bg-black/5"}`}
+              >
+                {loadingMore ? <><Loader2 size={14} className="animate-spin" /> Loading more...</> : "See more results"}
+              </button>
+            )}
           </div>
         )}
 
