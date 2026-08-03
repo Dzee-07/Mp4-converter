@@ -10,6 +10,7 @@ import {
    API base — reads an env var under a real Vite build.
 --------------------------------------------------------- */
 function getApiBase() {
+  console.log("API BASE =", import.meta.env.VITE_API_BASE_URL);
   return import.meta.env.VITE_API_BASE_URL || null;
 }
 
