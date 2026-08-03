@@ -339,35 +339,34 @@ export default function App() {
       };
 
       if (!API_BASE) {
-  fallbackToDemo();
-  setIsSearching(false);
-  return;
-}
+        fallbackToDemo();
+        setIsSearching(false);
+        return;
+      }
 
-try {
-  console.log("API_BASE =", API_BASE);
+      try {
+          console.log("API_BASE =", API_BASE);
 
-  const searchUrl =
-    `${API_BASE}/search?platform=${platform}&q=${encodeURIComponent(q)}`;
+          const searchUrl =
+            `${API_BASE}/search?platform=${platform}&q=${encodeURIComponent(q)}`;
 
-  console.log("SEARCH URL =", searchUrl);
+          console.log("SEARCH URL =", searchUrl);
 
-  const res = await fetch(searchUrl);
+          const res = await fetch(searchUrl);
 
-  console.log("SEARCH STATUS:", res.status);
+          console.log("SEARCH STATUS:", res.status);
 
-  const data = await res.json();
+          const data = await res.json();
 
-  console.log("SEARCH DATA:", data);
+          console.log("SEARCH DATA:", data);
 
-  if (data.success && Array.isArray(data.results)) {
-    setSearchResults(
-      data.results.map((r) => ({
+          if (data.success && Array.isArray(data.results)) {
+            setSearchResults(data.results.map((r) => ({
         ...r,
-        platform,
-        query: q,
-      }))
-    );
+            platform,
+            query: q,
+        }))
+      );
 
     setNextPageToken(data.nextPageToken || null);
   } else {
