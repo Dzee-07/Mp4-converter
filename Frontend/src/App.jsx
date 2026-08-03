@@ -339,56 +339,59 @@ export default function App() {
       };
 
       if (!API_BASE) {
-        fallbackToDemo();
-        setIsSearching(false);
-        return;
-      }
+  fallbackToDemo();
+  setIsSearching(false);
+  return;
+}
 
-      try {
-        const res = await fetch(
-          `${API_BASE}/search?platform=${platform}&q=${encodeURIComponent(q)}`
-        );
+try {
+  console.log("API_BASE =", API_BASE);
 
-        console.log("SEARCH STATUS:", res.status);
+  const searchUrl =
+    `${API_BASE}/search?platform=${platform}&q=${encodeURIComponent(q)}`;
 
-        const data = await res.json();
+  console.log("SEARCH URL =", searchUrl);
 
-        console.log("SEARCH DATA:", data);
+  const res = await fetch(searchUrl);
 
-        if (data.success && Array.isArray(data.results)) {
-          setSearchResults(
-            data.results.map((r) => ({
-              ...r,
-              platform,
-              query: q,
-            }))
-          );
+  console.log("SEARCH STATUS:", res.status);
 
-          setNextPageToken(data.nextPageToken || null);
-        } else {
-          console.error("SEARCH FAILED:", data.error);
+  const data = await res.json();
 
-          setSearchResults([]);
-          setToast({
-            type: "error",
-            text: data.error || "Search failed",
-          });
-        }
-      } catch (error) {
-        console.error("SEARCH NETWORK ERROR:", error);
+  console.log("SEARCH DATA:", data);
 
-        setSearchResults([]);
+  if (data.success && Array.isArray(data.results)) {
+    setSearchResults(
+      data.results.map((r) => ({
+        ...r,
+        platform,
+        query: q,
+      }))
+    );
 
-        setToast({
-          type: "error",
-          text: "Cannot connect to backend",
-        });
-      } finally {
-        setIsSearching(false);
-      }
-    }
-  };
+    setNextPageToken(data.nextPageToken || null);
+  } else {
+    console.error("SEARCH FAILED:", data.error);
 
+    setSearchResults([]);
+
+    setToast({
+      type: "error",
+      text: data.error || "Search failed",
+    });
+  }
+} catch (error) {
+  console.error("SEARCH NETWORK ERROR:", error);
+
+  setSearchResults([]);
+
+  setToast({
+    type: "error",
+    text: "Cannot connect to backend",
+  });
+} finally {
+  setIsSearching(false);
+}
   const loadMoreResults = async () => {
     const API_BASE = getApiBase();
     if (!API_BASE || !nextPageToken || !activeSearch || loadingMore) return;
