@@ -24,7 +24,7 @@ app.post("/api/convert", async (req, res) => {
 
     // 1. Utilize a streamlined, high-speed extraction engine to handle format parsing
     // This circumvents signature throttling and provides a direct, packaged MP4 media mirror link.
-    const extractionResponse = await fetch("https://cobalt.tools", {
+    const extractionResponse = await fetch("https://api.cobalt.tools/api/json", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
