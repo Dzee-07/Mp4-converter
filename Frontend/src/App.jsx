@@ -356,37 +356,108 @@ export default function App() {
 
   const openDownloadFlow = (item) => setDownloadFlow({ item, phase: "resolution", resolution: RESOLUTIONS[platform][0], progress: 0 });
 
-  const runDownload = (item, res) => {
-    if (!online) {
-      setDownloadFlow({ item, phase: "failed", resolution: res, progress: 0 });
-      setToast({ type: "error", text: "Download failed - no internet connection." });
-      setTimeout(() => setDownloadFlow(null), 1200);
-      return;
-    }
-    setDownloadFlow({ item, phase: "downloading", resolution: res, progress: 0 });
-    setToast({ type: "info", text: `Downloading "${item.title}"...` });
-    progressTimer.current = setInterval(() => {
-      setDownloadFlow((f) => {
-        if (!f || f.phase !== "downloading") return f;
-        const nextVal = Math.min(100, f.progress + Math.random() * 20 + 10);
-        if (nextVal >= 100) {
-          clearInterval(progressTimer.current);
-          const a = document.createElement("a");
-          a.href = res.downloadUrl;
-          a.download = `${item.title}.mp4`;
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-          setHistory((h) => [{ id: Date.now(), title: item.title, platform, resolution: res, time: new Date().toLocaleString() }, ...h]);
-          setCompleteBanner({ title: item.title });
-          setTimeout(() => setDownloadFlow(null), 500);
-          return { ...f, progress: 100, phase: "done" };
-        }
-        return { ...f, progress: nextVal };
-      });
-    }, 220);
-  };
+  const runDownload = async (item, res) => {
+  if (!online) {
+    setDownloadFlow({
+      item,
+      phase: "failed",
+      resolution: res,
+      progress: 0,
+    });
 
+    setToast({
+      type: "error",
+      text: "Download failed - no internet connection.",
+    });
+
+    setTimeout(() => setDownloadFlow(null), 1200);
+    return;
+  }
+
+  try {
+    setDownloadFlow({
+      item,
+      phase: "downloading",
+      resolution: res,
+      progress: 20,
+    });
+
+    setToast({
+      type: "info",
+      text: `Downloading "${item.title}"...`,
+    });
+
+    const API_BASE = getApiBase();
+
+    if (!API_BASE) {
+      throw new Error("Backend URL is not configured.");
+    }
+
+    const response = await fetch(`${API_BASE}/convert`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        url: item.url,
+        resolution: res,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok || !data.success) {
+      throw new Error(data.error || "Conversion failed.");
+    }
+
+    setDownloadFlow((f) => ({
+      ...f,
+      progress: 100,
+      phase: "done",
+    }));
+
+    const a = document.createElement("a");
+    a.href = data.downloadUrl;
+    a.download = `${data.title}.mp4`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+
+    setHistory((h) => [
+      {
+        id: Date.now(),
+        title: item.title,
+        platform,
+        resolution: res,
+        time: new Date().toLocaleString(),
+      },
+      ...h,
+    ]);
+
+    setCompleteBanner({
+      title: item.title,
+    });
+
+    setTimeout(() => setDownloadFlow(null), 500);
+
+  } catch (err) {
+    console.error("Download failed:", err);
+
+    setDownloadFlow({
+      item,
+      phase: "failed",
+      resolution: res,
+      progress: 0,
+    });
+
+    setToast({
+      type: "error",
+      text: err.message || "Download failed.",
+    });
+
+    setTimeout(() => setDownloadFlow(null), 1500);
+  }
+};
   const handleSignup = (data) => {
     const newUser = { id: "usr_" + Date.now(), name: data.name, email: data.email, plan: "free", joinedAt: new Date().toISOString(), payments: [], downloads: [] };
     setUsers((u) => [...u, newUser]);
