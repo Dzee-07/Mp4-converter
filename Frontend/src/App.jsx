@@ -454,18 +454,27 @@ export default function App() {
         throw new Error("Backend URL is not configured.");
       }
 
-      const response = await fetch(`${API_BASE}/convert`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          url: item.url,
-          resolution: res,
-        }),
-      });
+   console.log("DOWNLOAD ITEM =", item);
+console.log("CONVERT URL =", `${API_BASE}/convert`);
+console.log("VIDEO URL =", item.url);
+console.log("RESOLUTION =", res);
 
-      const data = await response.json();
+const response = await fetch(`${API_BASE}/convert`, {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    url: item.url,
+    resolution: res,
+  }),
+});
+
+console.log("CONVERT STATUS =", response.status);
+
+const data = await response.json();
+
+console.log("CONVERT DATA =", data);
 
       if (!response.ok || !data.success) {
         throw new Error(data.error || "Conversion failed.");
