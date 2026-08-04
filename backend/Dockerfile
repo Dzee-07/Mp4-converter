@@ -9,8 +9,6 @@ RUN python3 -m pip install --break-system-packages yt-dlp
 
 RUN python3 -m yt_dlp --version
 
-RUN python3 -m yt_dlp --version
-
 WORKDIR /app
 
 COPY package*.json ./
