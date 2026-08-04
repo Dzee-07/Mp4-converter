@@ -5,9 +5,9 @@ RUN apt-get update && apt-get install -y \
     python3 \
     python3-pip
 
-RUN python3 -m pip install --upgrade pip
+RUN python3 -m pip install --break-system-packages yt-dlp
 
-RUN python3 -m pip install yt-dlp
+RUN python3 -m yt_dlp --version
 
 RUN python3 -m yt_dlp --version
 
