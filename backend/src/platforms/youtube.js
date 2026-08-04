@@ -119,7 +119,7 @@ export class YouTubePlatform extends BasePlatform {
 
       // 2. Formulate the shell sub-process execution query targeting your environment binary files
   
-      const command = `python3 -m yt_dlp -f "${formatSelector}" --get-url --dump-json "${_url}"`;
+      const command = `python3 -m yt_dlp -f "${formatSelector}" -g "${_url}"`;
       
       const { stdout, stderr } = await execAsync(command);
 
