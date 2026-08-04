@@ -118,7 +118,7 @@ export class YouTubePlatform extends BasePlatform {
       const formatSelector = `bestvideo[height<=${heightLimit}][ext=mp4]+bestaudio[ext=m4a]/best[height<=${heightLimit}][ext=mp4]/best[ext=mp4]/best`;
 
       // 2. Formulate the shell sub-process execution query targeting your environment binary files
-      const command = `yt-dlp -f "${formatSelector}" --get-url --dump-json "${_url}"`;
+      const command = `python3 -m yt_dlp -f "${formatSelector}" --get-url --dump-json "${_url}"`;
       
       const { stdout, stderr } = await execAsync(command);
 
