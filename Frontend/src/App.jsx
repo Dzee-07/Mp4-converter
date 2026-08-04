@@ -476,7 +476,7 @@ const data = await response.json();
 
 console.log("CONVERT DATA =", data);
 
-      if (!response.ok || !data.success) {
+if (!response.ok || !data.success) {
         throw new Error(data.error || "Conversion failed.");
       }
 
