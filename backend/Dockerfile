@@ -6,7 +6,9 @@ RUN apt-get update && apt-get install -y \
     python3-pip
 
 RUN python3 -m pip install --break-system-packages yt-dlp
+RUN curl -fsSL https://deno.land/install.sh | sh
 
+ENV PATH="/root/.deno/bin:${PATH}"
 RUN python3 -m yt_dlp --version
 
 WORKDIR /app
